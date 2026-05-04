@@ -66,4 +66,41 @@ ${resumeText}${jobSection}`,
     }
 });
 
+// from simple prompt to get sql query
+app.post("/sql", async (req, res) => {
+    const { question } = req.body;
+
+    try {
+        const response = await client.chat.completions.create({
+            model: "gpt-4.1-mini",
+            messages: [
+                {
+                    role: "system",
+                    content: "You are a PostgreSQL expert.",
+                },
+                {
+                    role: "user",
+                    content: `
+Convert this into SQL.
+
+Rules:
+- Only return SQL
+- No explanation
+
+Question:
+${question}
+          `,
+                },
+            ],
+            temperature: 0,
+        });
+
+        res.json({
+            sql: response.choices[0].message.content,
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.listen(3000, () => console.log("Server running on port 3000"));
