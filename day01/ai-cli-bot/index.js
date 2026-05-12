@@ -4,11 +4,10 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const openai = new OpenAI({
+const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// 👇 store conversation
 let messages = [
   {
     role: "system",
@@ -38,20 +37,30 @@ async function chat() {
 
     messages.push({ role: "user", content: userInput });
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: messages,
-      temperature: 0.7,
-    });
+    try {
+      const stream = await client.responses.stream({
+        model: "gpt-5-mini",
+        input: messages,
+      });
 
-    console.log("Tokens used:", response.usage.total_tokens);
+      let fullReply = "";
 
-    const reply = response.choices[0].message.content;
+      process.stdout.write("AI: ");
 
-    console.log("AI:", reply);
+      for await (const event of stream) {
+        if (event.type === "response.output_text.delta") {
+          process.stdout.write(event.delta);
+          fullReply += event.delta;
+        }
+      }
 
-    // 👇 store AI response
-    messages.push({ role: "assistant", content: reply });
+      console.log("\n");
+
+      messages.push({ role: "assistant", content: fullReply });
+
+    } catch (err) {
+      console.log("Error:", err.message);
+    }
   }
 }
 
